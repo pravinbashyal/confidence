@@ -4,6 +4,7 @@ const io = require('socket.io')(http);
 
 class Poll {
     votes = {}
+    hidden = true
 
     vote(username, confidence) {
         this.votes[username] = confidence
@@ -28,6 +29,12 @@ app.get('/', (_req, res) => {
 io.on('connection', (socket) => {
     socket.on('ready', () => {
         socket.emit('changed', poll.votes)
+        socket.emit('hidden', { hidden: poll.hidden })
+    })
+
+    socket.on('hide', ({ hidden }) => {
+        poll.hidden = Boolean(hidden)
+        io.emit('hidden', { hidden: poll.hidden })
     })
 
     socket.on('confidence', ({ confidence, username }) => {

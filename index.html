@@ -49,7 +49,6 @@ const useConfidences = (socket, username) => {
 
     useEffect(() => {
         socket.on('changed', (confidences) => setConfidences(confidences))
-        socket.emit('ready', {})
     }, [socket])
 
 
@@ -62,6 +61,16 @@ const useConfidences = (socket, username) => {
     }, [username])
 
     return { confidences, confidence, unset, clear }
+}
+
+const useHidden = (socket) => {
+    const [hidden, setHidden] = useState(true)
+
+    useEffect(() => {
+        socket.on('hidden', ({hidden}) => setHidden(hidden))
+    }, [socket])
+
+    return { hidden, setHidden: (hidden) => socket.emit('hide', { hidden }) }
 }
 
 const Clear = ({ onClear }) => html`
@@ -113,7 +122,8 @@ const VoteCount = ({confidences}) => {
 }
 
 
-const Sidebar = ({ username, setUsername, onClear, confidences }) => {
+const Sidebar = ({ username, setUsername, onClear, confidences, socket }) => {
+    const { hidden, setHidden } = useHidden(socket)
     const voteCount = Object.values(confidences).length
     const voteTotal = Object.values(confidences).reduce((total, c) => total + c, 0)
     const avg = (voteTotal / voteCount) || 0
@@ -129,10 +139,15 @@ const Sidebar = ({ username, setUsername, onClear, confidences }) => {
             <h1 class="text-lg text-center">Confidences</h1>
             <div class="m-2" />
             <${Clear} onClear=${onClear} />
-            <div class="pt-px bg-green-700 my-4" />
-            <div class="text-center text-lg">Avg: ${avgRounded}</div>
-            <div class="pt-px bg-green-700 my-4" />
-            <${VoteCount} confidences=${confidences} />
+            <div class="m-2" />
+            <button class="p-2 bg-green-600 text-green-100 rounded shadow" onClick=${() => setHidden(!hidden)}>${hidden ? 'Show' : 'Hide'}</button>
+
+            ${hidden ? '' : html`
+                <div class="pt-px bg-green-700 my-4" />
+                <div class="text-center text-lg">Avg: ${avgRounded}</div>
+                <div class="pt-px bg-green-700 my-4" />
+                <${VoteCount} confidences=${confidences} />
+            `}
         </div>
 `
 }
@@ -143,7 +158,16 @@ const App = () => {
     const socket = useSocket()
     const [username, setUsername] = useSimpleLocalStorageValue('username', `Nobody-${Date.now().toString()}`)
     const { confidences, confidence, clear, unset } = useConfidences(socket, username)
-    
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            socket.emit('ready', {})
+        }, 10)
+
+        return () => {
+            clearTimeout(timeoutId)
+        }
+    }, [socket])
 
     return html`
         <main class="flex flex-row min-h-screen items-stretch">
@@ -157,7 +181,7 @@ const App = () => {
                     <div class="mb-16" />
                 </div>
             </div>
-            <${Sidebar} confidences=${confidences} username=${username} setUsername=${setUsername} onClear=${clear} />
+            <${Sidebar} socket=${socket} confidences=${confidences} username=${username} setUsername=${setUsername} onClear=${clear} />
         </main>
     `
 }
