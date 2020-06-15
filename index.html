@@ -114,7 +114,7 @@ const VoteCount = ({confidences}) => {
             const [value, votes] = entry
             const votesCount = votes.length
             return html`
-                <div class="text-lg text-center">-${value}- (${votesCount})</div>
+                <div class="text-lg text-center" key=${value}>-${value}- (${votesCount})</div>
                 <div>${votes.join(', ')}</div>
             `
         })}
@@ -141,9 +141,10 @@ const Sidebar = ({ username, setUsername, onClear, confidences, socket }) => {
             <${Clear} onClear=${onClear} />
             <div class="m-2" />
             <button class="p-2 bg-green-600 text-green-100 rounded shadow" onClick=${() => setHidden(!hidden)}>${hidden ? 'Show' : 'Hide'}</button>
-
+            <div class="pt-px bg-green-700 my-4" />
+            <div class="text-center text-lg">Total: ${voteCount}</div>
             ${hidden ? '' : html`
-                <div class="pt-px bg-green-700 my-4" />
+                <div class="mb-4" />
                 <div class="text-center text-lg">Avg: ${avgRounded}</div>
                 <div class="pt-px bg-green-700 my-4" />
                 <${VoteCount} confidences=${confidences} />
