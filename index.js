@@ -28,7 +28,7 @@ app.get('/', (_req, res) => {
 
 io.on('connection', (socket) => {
     socket.on('ready', () => {
-        socket.emit('changed', poll.votes)
+        socket.emit('changed', { votes: poll.votes })
         socket.emit('hidden', { hidden: poll.hidden })
     })
 
@@ -39,17 +39,17 @@ io.on('connection', (socket) => {
 
     socket.on('confidence', ({ confidence, username }) => {
         poll.vote(username, confidence)
-        io.emit('changed', poll.votes)
+        io.emit('changed', { votes: poll.votes })
     })
 
     socket.on('clear', () => {
         poll.clear()
-        io.emit('changed', poll.votes)
+        io.emit('changed', { votes: poll.votes })
     })
 
     socket.on('unset', ({ username }) => {
         poll.unset(username)
-        io.emit('changed', poll.votes)
+        io.emit('changed', { votes: poll.votes })
     })
 });
 
