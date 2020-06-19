@@ -43,7 +43,7 @@ const useConfidences = (socket, username) => {
   const [confidences, setConfidences] = useState({})
 
   useEffect(() => {
-    socket.on("changed", ({ votes }) => setConfidences(votes))
+    socket.on("votes", ({ votes }) => setConfidences(votes))
   }, [socket])
 
   const unset = () => socket.emit("unset", { username })
