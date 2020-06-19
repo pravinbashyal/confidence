@@ -1,8 +1,9 @@
 const app = require("express")()
 const http = require("http").createServer(app)
 const io = require("socket.io")(http)
+const path = require("path")
 
-const file = "index.html"
+const file = path.resolve(__dirname, "..", "client", "index.html")
 const options = {}
 const Bundler = require("parcel-bundler")
 const bundler = new Bundler(file, options)
@@ -26,10 +27,6 @@ class Poll {
 }
 
 const poll = new Poll()
-
-app.get("/", (_req, res) => {
-  res.sendFile(__dirname + "/index.html")
-})
 
 io.on("connection", (socket) => {
   socket.on("ready", () => {
