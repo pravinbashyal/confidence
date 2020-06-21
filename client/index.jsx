@@ -1,30 +1,71 @@
-import React, { useState, useEffect } from "react"
+import React, { useEffect, useRef, createContext, useContext } from "react"
 import { render } from "react-dom"
 import io from "socket.io-client"
+import { RecoilRoot, atom, useRecoilState } from "recoil"
 
-const useSimpleLocalStorageValue = (key, def) => {
-  const initial = window.localStorage.getItem(key) || def
-  window.localStorage.setItem(key, initial)
-  const [value, setValue] = useState(initial)
-  const setValueNew = (newValue) => {
-    window.localStorage.setItem(key, newValue)
-    setValue(newValue)
-  }
-  return [value, setValueNew]
+const currentUsernameState = atom({
+  key: "currentUsernameState",
+  default:
+    window.localStorage.getItem("username") ||
+    (() => {
+      const username = `Anon-${Date.now()}`
+      window.localStorage.setItem("username", username)
+      return username
+    })(),
+})
+
+const useClear = () => {
+  const socket = useContext(SocketContext)
+  return () => socket.emit("clear")
 }
 
-const useSocket = (subscribe) => {
-  const [socket] = useState(io())
+const useVote = () => {
+  const socket = useContext(SocketContext)
+  const [username] = useRecoilState(currentUsernameState)
+  return (vote) => socket.emit("confidence", { confidence: vote, username })
+}
 
+const useUnset = () => {
+  const socket = useContext(SocketContext)
+  const [username] = useRecoilState(currentUsernameState)
+  return () => socket.emit("unset", { username })
+}
+
+const CurrentUsernameSubscription = () => {
+  const [currentUsername] = useRecoilState(currentUsernameState)
+  const socket = useContext(SocketContext)
   useEffect(() => {
-    if (subscribe) {
-      subscribe(socket)
+    window.localStorage.setItem("username", currentUsername)
+    return () => {
+      socket.emit("unset", { username: currentUsername })
     }
+  }, [currentUsername])
+  return null
+}
 
-    return () => socket.close()
+const SocketContext = createContext()
+const SocketProvider = ({ children }) => {
+  const socketRef = useRef(io())
+  return (
+    <SocketContext.Provider value={socketRef.current}>
+      {children}
+    </SocketContext.Provider>
+  )
+}
+
+const InitialSubscription = () => {
+  const socket = useContext(SocketContext)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      socket.emit("ready", {})
+    }, 10)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
   }, [socket])
 
-  return socket
+  return null
 }
 
 const invert = (value) => {
@@ -39,33 +80,47 @@ const invert = (value) => {
   return dict
 }
 
-const useConfidences = (socket, username) => {
-  const [confidences, setConfidences] = useState({})
+const confidencesState = atom({
+  key: "confidencesState",
+  default: {},
+})
+
+const ConfidencesSubscription = () => {
+  const socket = useContext(SocketContext)
+  const [, setConfidences] = useRecoilState(confidencesState)
 
   useEffect(() => {
     socket.on("votes", ({ votes }) => setConfidences(votes))
   }, [socket])
 
-  const unset = () => socket.emit("unset", { username })
-  const confidence = (value) =>
-    socket.emit("confidence", { confidence: value, username })
-  const clear = () => socket.emit("clear")
-
-  useEffect(() => {
-    return () => unset()
-  }, [username])
-
-  return { confidences, confidence, unset, clear }
+  return null
 }
 
-const useHidden = (socket) => {
-  const [hidden, setHidden] = useState(true)
+const hiddenState = atom({
+  default: true,
+  key: "hiddenState",
+})
+
+const HiddenStateSubscription = () => {
+  const socket = useContext(SocketContext)
+  const [hidden, setHidden] = useRecoilState(hiddenState)
+  const knownHiddenState = useRef(hidden)
 
   useEffect(() => {
-    socket.on("hidden", ({ hidden }) => setHidden(hidden))
+    socket.on("hidden", ({ hidden: serverHidden }) => {
+      knownHiddenState.current = serverHidden
+      setHidden(serverHidden)
+    })
   }, [socket])
 
-  return { hidden, setHidden: (hidden) => socket.emit("hide", { hidden }) }
+  useEffect(() => {
+    if (knownHiddenState.current !== hidden) {
+      knownHiddenState.current = hidden
+      socket.emit("hide", { hidden })
+    }
+  }, [hidden])
+
+  return null
 }
 
 const Clear = ({ onClear }) => (
@@ -97,19 +152,27 @@ const Confidence = ({ value, selected, onSelect }) => (
   </button>
 )
 
-const ConfidencePicker = ({ selected, onSelect, onUnset }) => (
-  <div className="flex flex-row flex-wrap -ml-2 -mt-2">
-    {CONFIDENCE_VALUES.map((value) => (
-      <div className="m-2" key={value}>
-        <Confidence
-          value={value}
-          selected={value === selected}
-          onSelect={() => (selected !== value ? onSelect(value) : onUnset())}
-        />
-      </div>
-    ))}
-  </div>
-)
+const ConfidencePicker = () => {
+  const [username] = useRecoilState(currentUsernameState)
+  const [confidences] = useRecoilState(confidencesState)
+  const selected = confidences[username]
+  const onSelect = useVote()
+  const onUnset = useUnset()
+
+  return (
+    <div className="flex flex-row flex-wrap -ml-2 -mt-2">
+      {CONFIDENCE_VALUES.map((value) => (
+        <div className="m-2" key={value}>
+          <Confidence
+            value={value}
+            selected={value === selected}
+            onSelect={() => (selected !== value ? onSelect(value) : onUnset())}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 const VoteCount = ({ confidences }) => {
   const confidencesByValue = invert(confidences)
@@ -136,8 +199,11 @@ const VoteCount = ({ confidences }) => {
   )
 }
 
-const Sidebar = ({ username, setUsername, onClear, confidences, socket }) => {
-  const { hidden, setHidden } = useHidden(socket)
+const Sidebar = () => {
+  const onClear = useClear()
+  const [confidences] = useRecoilState(confidencesState)
+  const [username, setUsername] = useRecoilState(currentUsernameState)
+  const [hidden, setHidden] = useRecoilState(hiddenState)
   const voteCount = Object.values(confidences).length
   const voteTotal = Object.values(confidences).reduce(
     (total, c) => total + c,
@@ -186,46 +252,24 @@ const Sidebar = ({ username, setUsername, onClear, confidences, socket }) => {
 const CONFIDENCE_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 const App = () => {
-  const socket = useSocket()
-  const [username, setUsername] = useSimpleLocalStorageValue(
-    "username",
-    `Nobody-${Date.now().toString()}`
-  )
-  const { confidences, confidence, clear, unset } = useConfidences(
-    socket,
-    username
-  )
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      socket.emit("ready", {})
-    }, 10)
-
-    return () => {
-      clearTimeout(timeoutId)
-    }
-  }, [socket])
-
   return (
-    <main className="flex flex-row min-h-screen items-stretch">
-      <div className="p-4 bg-gray-100 flex-grow flex items-center justify-center">
-        <div className="max-w-xl">
-          <ConfidencePicker
-            selected={confidences[username]}
-            onSelect={confidence}
-            onUnset={unset}
-          />
-          <div className="mb-16" />
-        </div>
-      </div>
-      <Sidebar
-        socket={socket}
-        confidences={confidences}
-        username={username}
-        setUsername={setUsername}
-        onClear={clear}
-      />
-    </main>
+    <RecoilRoot>
+      <SocketProvider>
+        <InitialSubscription />
+        <HiddenStateSubscription />
+        <ConfidencesSubscription />
+        <CurrentUsernameSubscription />
+        <main className="flex flex-row min-h-screen items-stretch">
+          <div className="p-4 bg-gray-100 flex-grow flex items-center justify-center">
+            <div className="max-w-xl">
+              <ConfidencePicker />
+              <div className="mb-16" />
+            </div>
+          </div>
+          <Sidebar />
+        </main>
+      </SocketProvider>
+    </RecoilRoot>
   )
 }
 
