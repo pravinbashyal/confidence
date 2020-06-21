@@ -263,7 +263,6 @@ const App = () => {
           <div className="p-4 bg-gray-100 flex-grow flex items-center justify-center">
             <div className="max-w-xl">
               <ConfidencePicker />
-              <div className="mb-16" />
             </div>
           </div>
           <Sidebar />
