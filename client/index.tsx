@@ -10,6 +10,26 @@ import {
   selectorFamily,
 } from "recoil"
 
+const SocketContext = createContext<ReturnType<typeof io> | undefined>(
+  undefined
+)
+const SocketProvider: React.FC = ({ children }) => {
+  const socketRef = useRef(io())
+  return (
+    <SocketContext.Provider value={socketRef.current}>
+      {children}
+    </SocketContext.Provider>
+  )
+}
+
+const useSocket = () => {
+  const socket = useContext(SocketContext)
+  if (!socket) {
+    throw new Error("Must use in SocketContext")
+  }
+  return socket
+}
+
 const currentUsernameState = atom({
   key: "currentUsernameState",
   default:
@@ -22,25 +42,26 @@ const currentUsernameState = atom({
 })
 
 const useClear = () => {
-  const socket = useContext(SocketContext)
+  const socket = useSocket()
   return () => socket.emit("clear")
 }
 
 const useVote = () => {
-  const socket = useContext(SocketContext)
+  const socket = useSocket()
   const [username] = useRecoilState(currentUsernameState)
-  return (vote) => socket.emit("confidence", { confidence: vote, username })
+  return (vote: number) =>
+    socket.emit("confidence", { confidence: vote, username })
 }
 
 const useUnset = () => {
-  const socket = useContext(SocketContext)
+  const socket = useSocket()
   const [username] = useRecoilState(currentUsernameState)
   return () => socket.emit("unset", { username })
 }
 
 const CurrentUsernameSubscription = () => {
   const [currentUsername] = useRecoilState(currentUsernameState)
-  const socket = useContext(SocketContext)
+  const socket = useSocket()
   useEffect(() => {
     window.localStorage.setItem("username", currentUsername)
     return () => {
@@ -50,18 +71,8 @@ const CurrentUsernameSubscription = () => {
   return null
 }
 
-const SocketContext = createContext()
-const SocketProvider = ({ children }) => {
-  const socketRef = useRef(io())
-  return (
-    <SocketContext.Provider value={socketRef.current}>
-      {children}
-    </SocketContext.Provider>
-  )
-}
-
 const InitialSubscription = () => {
-  const socket = useContext(SocketContext)
+  const socket = useSocket()
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       socket.emit("ready", {})
@@ -75,8 +86,8 @@ const InitialSubscription = () => {
   return null
 }
 
-const invert = (value) => {
-  const dict = {}
+const invert = (value: { [index: string]: number }) => {
+  const dict: { [index: number]: string[] } = {}
   Object.entries(value).forEach((entry) => {
     const key = entry[1]
     if (!dict[key]) {
@@ -87,17 +98,17 @@ const invert = (value) => {
   return dict
 }
 
-const confidencesState = atom({
+const confidencesState = atom<{ [index: string]: number }>({
   key: "confidencesState",
   default: {},
 })
 
 const ConfidencesSubscription = () => {
-  const socket = useContext(SocketContext)
+  const socket = useSocket()
   const [, setConfidences] = useRecoilState(confidencesState)
 
   useEffect(() => {
-    socket.on("votes", ({ votes }) => setConfidences(votes))
+    socket.on("votes", ({ votes }: any) => setConfidences(votes))
   }, [socket])
 
   return null
@@ -109,12 +120,12 @@ const hiddenState = atom({
 })
 
 const HiddenStateSubscription = () => {
-  const socket = useContext(SocketContext)
+  const socket = useSocket()
   const [hidden, setHidden] = useRecoilState(hiddenState)
   const knownHiddenState = useRef(hidden)
 
   useEffect(() => {
-    socket.on("hidden", ({ hidden: serverHidden }) => {
+    socket.on("hidden", ({ hidden: serverHidden }: any) => {
       knownHiddenState.current = serverHidden
       setHidden(serverHidden)
     })
@@ -152,7 +163,7 @@ const isConfidenceSelectedState = selectorFamily({
   },
 })
 
-const Confidence = ({ value }) => {
+const Confidence: React.FC<{ value: number }> = ({ value }) => {
   const isSelected = useRecoilValue(isConfidenceSelectedState(value))
   const onSelect = useVote()
   const onUnset = useUnset()
