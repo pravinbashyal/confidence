@@ -9,6 +9,7 @@ import {
   selector,
   selectorFamily,
 } from "recoil"
+import { motion, HTMLMotionProps, AnimatePresence } from "framer-motion"
 
 const SocketContext = createContext<ReturnType<typeof io> | undefined>(
   undefined
@@ -143,14 +144,7 @@ const HiddenStateSubscription = () => {
 
 const ClearAllButton = () => {
   const onClear = useClear()
-  return (
-    <button
-      className="p-2 bg-green-600 text-green-100 rounded shadow"
-      onClick={onClear}
-    >
-      Clear All
-    </button>
-  )
+  return <Button onClick={onClear}>Clear All</Button>
 }
 
 const isConfidenceSelectedState = selectorFamily({
@@ -168,9 +162,12 @@ const Confidence: React.FC<{ value: number }> = ({ value }) => {
   const onSelect = useVote()
   const onUnset = useUnset()
   const onClick = () => (isSelected ? onUnset() : onSelect(value))
-
+  const variants = {
+    initial: { scale: 1 },
+    selected: { scale: 1.2 },
+  }
   return (
-    <button
+    <motion.button
       className={`p-2 rounded-full shadow-lg ${
         isSelected ? "bg-green-400" : "bg-green-200"
       } hover:bg-green-400`}
@@ -179,6 +176,9 @@ const Confidence: React.FC<{ value: number }> = ({ value }) => {
         transition: "0.05s ease-in-out transform",
       }}
       onClick={onClick}
+      variants={variants}
+      initial={"initial"}
+      animate={isSelected ? "selected" : "initial"}
     >
       <span
         className="flex items-center justify-center bg-white rounded-full text-lg"
@@ -186,7 +186,7 @@ const Confidence: React.FC<{ value: number }> = ({ value }) => {
       >
         {value}
       </span>
-    </button>
+    </motion.button>
   )
 }
 
@@ -259,16 +259,28 @@ const UsernameForm = () => {
   )
 }
 
+const Button: React.FC<HTMLMotionProps<"button">> = ({
+  children,
+  ...props
+}) => {
+  return (
+    <motion.button
+      {...props}
+      className="p-2 bg-green-600 text-green-100 rounded shadow"
+      whileHover={{ translateY: -1 }}
+    >
+      {children}
+    </motion.button>
+  )
+}
+
 const HideButton = () => {
   const [hidden, setHidden] = useRecoilState(hiddenState)
 
   return (
-    <button
-      className="p-2 bg-green-600 text-green-100 rounded shadow"
-      onClick={() => setHidden(!hidden)}
-    >
+    <Button onClick={() => setHidden(!hidden)}>
       {hidden ? "Show Results" : "Hide Results"}
-    </button>
+    </Button>
   )
 }
 
@@ -278,29 +290,45 @@ const Sidebar = () => {
 
   return (
     <div className="flex flex-col p-4 bg-green-800  text-green-200">
-      <h2 className="text-lg text-center">Settings</h2>
-      <div className="mb-4" />
-      <UsernameForm />
+      <AnimatePresence>
+        <h2 className="text-lg text-center">Settings</h2>
+        <div className="mb-4" />
+        <UsernameForm />
 
-      <div className="m-4" />
+        <div className="m-4" />
 
-      <h1 className="text-lg text-center">Confidences</h1>
-      <div className="m-2" />
-      <ClearAllButton />
+        <h1 className="text-lg text-center">Confidences</h1>
+        <div className="m-2" />
+        <ClearAllButton />
 
-      <div className="m-2" />
-      <HideButton />
+        <div className="m-2" />
+        <HideButton />
 
-      <div className="pt-px bg-green-700 my-4" />
-      <div className="text-center text-lg"># Votes: {voteCount}</div>
-      {hidden ? null : (
-        <>
-          <div className="mb-4" />
-          <div className="text-center text-lg">Avg: {voteAverageRounded}</div>
-          <div className="pt-px bg-green-700 my-4" />
-          <VoteCount />
-        </>
-      )}
+        <div className="pt-px bg-green-700 my-4" />
+        <div className="text-center text-lg">
+          # Votes:{" "}
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 2 } }}
+            key={voteCount}
+          >
+            {voteCount}
+          </motion.span>
+        </div>
+        {hidden ? null : (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.3 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+          >
+            <div className="mb-4" />
+            <div className="text-center text-lg">Avg: {voteAverageRounded}</div>
+            <div className="pt-px bg-green-700 my-4" />
+            <VoteCount />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
