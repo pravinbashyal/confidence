@@ -1,7 +1,14 @@
 import React, { useEffect, useRef, createContext, useContext } from "react"
 import { render } from "react-dom"
 import io from "socket.io-client"
-import { RecoilRoot, atom, useRecoilState } from "recoil"
+import {
+  RecoilRoot,
+  atom,
+  useRecoilState,
+  useRecoilValue,
+  selector,
+  selectorFamily,
+} from "recoil"
 
 const currentUsernameState = atom({
   key: "currentUsernameState",
@@ -123,58 +130,69 @@ const HiddenStateSubscription = () => {
   return null
 }
 
-const Clear = ({ onClear }) => (
-  <button
-    className="p-2 bg-green-600 text-green-100 rounded shadow"
-    onClick={onClear}
-  >
-    Clear
-  </button>
-)
-
-const Confidence = ({ value, selected, onSelect }) => (
-  <button
-    className={`p-2 rounded-full shadow-lg ${
-      selected ? "bg-green-400" : "bg-green-200"
-    } hover:bg-green-400`}
-    style={{
-      transform: selected ? "scale(1.2)" : "scale(1)",
-      transition: "0.05s ease-in-out transform",
-    }}
-    onClick={onSelect}
-  >
-    <span
-      className="flex items-center justify-center bg-white rounded-full text-lg"
-      style={{ width: "4ch", height: "4ch" }}
+const ClearButton = () => {
+  const onClear = useClear()
+  return (
+    <button
+      className="p-2 bg-green-600 text-green-100 rounded shadow"
+      onClick={onClear}
     >
-      {value}
-    </span>
-  </button>
-)
+      Clear
+    </button>
+  )
+}
 
-const ConfidencePicker = () => {
-  const [username] = useRecoilState(currentUsernameState)
-  const [confidences] = useRecoilState(confidencesState)
-  const selected = confidences[username]
+const isConfidenceSelectedState = selectorFamily({
+  key: "isConfidenceSelectedState",
+  get: (value) => ({ get }) => {
+    const username = get(currentUsernameState)
+    const confidences = get(confidencesState)
+    const selectedByUser = confidences[username]
+    return selectedByUser === value
+  },
+})
+
+const Confidence = ({ value }) => {
+  const isSelected = useRecoilValue(isConfidenceSelectedState(value))
   const onSelect = useVote()
   const onUnset = useUnset()
+  const onClick = () => (isSelected ? onUnset() : onSelect(value))
 
+  return (
+    <button
+      className={`p-2 rounded-full shadow-lg ${
+        isSelected ? "bg-green-400" : "bg-green-200"
+      } hover:bg-green-400`}
+      style={{
+        transform: isSelected ? "scale(1.2)" : "scale(1)",
+        transition: "0.05s ease-in-out transform",
+      }}
+      onClick={onClick}
+    >
+      <span
+        className="flex items-center justify-center bg-white rounded-full text-lg"
+        style={{ width: "4ch", height: "4ch" }}
+      >
+        {value}
+      </span>
+    </button>
+  )
+}
+
+const ConfidencePicker = () => {
   return (
     <div className="flex flex-row flex-wrap -ml-2 -mt-2">
       {CONFIDENCE_VALUES.map((value) => (
         <div className="m-2" key={value}>
-          <Confidence
-            value={value}
-            selected={value === selected}
-            onSelect={() => (selected !== value ? onSelect(value) : onUnset())}
-          />
+          <Confidence value={value} />
         </div>
       ))}
     </div>
   )
 }
 
-const VoteCount = ({ confidences }) => {
+const VoteCount = () => {
+  const [confidences] = useRecoilState(confidencesState)
   const confidencesByValue = invert(confidences)
   const confidencesWithVotesSorted = Object.entries(confidencesByValue).sort(
     (entry1, entry2) => entry2[1].length - entry1[1].length
@@ -199,50 +217,77 @@ const VoteCount = ({ confidences }) => {
   )
 }
 
-const Sidebar = () => {
-  const onClear = useClear()
-  const [confidences] = useRecoilState(confidencesState)
+const voteStatisticsState = selector({
+  key: "voteStatisticsState",
+  get: ({ get }) => {
+    const confidences = get(confidencesState)
+    const voteCount = Object.values(confidences).length
+    const voteTotal = Object.values(confidences).reduce(
+      (total, c) => total + c,
+      0
+    )
+    const avg = voteTotal / voteCount || 0
+    const voteAverageRounded = Math.round(avg * 100 + Number.EPSILON) / 100
+
+    return {
+      voteAverageRounded,
+      voteCount,
+    }
+  },
+})
+
+const UsernameForm = () => {
   const [username, setUsername] = useRecoilState(currentUsernameState)
-  const [hidden, setHidden] = useRecoilState(hiddenState)
-  const voteCount = Object.values(confidences).length
-  const voteTotal = Object.values(confidences).reduce(
-    (total, c) => total + c,
-    0
+
+  return (
+    <input
+      className="bg-grey-100 text-green-900 rounded shadow p-2"
+      value={username}
+      onChange={(event) => setUsername(event.target.value)}
+    />
   )
-  const avg = voteTotal / voteCount || 0
-  const avgRounded = Math.round(avg * 100 + Number.EPSILON) / 100
+}
+
+const HideButton = () => {
+  const [hidden, setHidden] = useRecoilState(hiddenState)
+
+  return (
+    <button
+      className="p-2 bg-green-600 text-green-100 rounded shadow"
+      onClick={() => setHidden(!hidden)}
+    >
+      {hidden ? "Show" : "Hide"}
+    </button>
+  )
+}
+
+const Sidebar = () => {
+  const { voteCount, voteAverageRounded } = useRecoilValue(voteStatisticsState)
+  const hidden = useRecoilValue(hiddenState)
+
   return (
     <div className="flex flex-col p-4 bg-green-800  text-green-200">
       <h2 className="text-lg text-center">Settings</h2>
       <div className="mb-4" />
-      <input
-        className="bg-grey-100 text-green-900 rounded shadow p-2"
-        value={username}
-        onChange={(event) => setUsername(event.target.value)}
-      />
+      <UsernameForm />
 
       <div className="m-4" />
 
       <h1 className="text-lg text-center">Confidences</h1>
       <div className="m-2" />
-      <Clear onClear={onClear} />
+      <ClearButton />
+
       <div className="m-2" />
-      <button
-        className="p-2 bg-green-600 text-green-100 rounded shadow"
-        onClick={() => setHidden(!hidden)}
-      >
-        {hidden ? "Show" : "Hide"}
-      </button>
+      <HideButton />
+
       <div className="pt-px bg-green-700 my-4" />
-      <div className="text-center text-lg">Total: {voteCount}</div>
-      {hidden ? (
-        ""
-      ) : (
+      <div className="text-center text-lg"># Votes: {voteCount}</div>
+      {hidden ? null : (
         <>
           <div className="mb-4" />
-          <div className="text-center text-lg">Avg: {avgRounded}</div>
+          <div className="text-center text-lg">Avg: {voteAverageRounded}</div>
           <div className="pt-px bg-green-700 my-4" />
-          <VoteCount confidences={confidences} />
+          <VoteCount />
         </>
       )}
     </div>
