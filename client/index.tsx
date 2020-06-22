@@ -141,14 +141,14 @@ const HiddenStateSubscription = () => {
   return null
 }
 
-const ClearButton = () => {
+const ClearAllButton = () => {
   const onClear = useClear()
   return (
     <button
       className="p-2 bg-green-600 text-green-100 rounded shadow"
       onClick={onClear}
     >
-      Clear
+      Clear All
     </button>
   )
 }
@@ -267,7 +267,7 @@ const HideButton = () => {
       className="p-2 bg-green-600 text-green-100 rounded shadow"
       onClick={() => setHidden(!hidden)}
     >
-      {hidden ? "Show" : "Hide"}
+      {hidden ? "Show Results" : "Hide Results"}
     </button>
   )
 }
@@ -286,7 +286,7 @@ const Sidebar = () => {
 
       <h1 className="text-lg text-center">Confidences</h1>
       <div className="m-2" />
-      <ClearButton />
+      <ClearAllButton />
 
       <div className="m-2" />
       <HideButton />
