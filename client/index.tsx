@@ -175,10 +175,6 @@ const Confidence: React.FC<{ value: number }> = ({ value }) => {
       className={`p-2 rounded-full shadow-lg ${
         isSelected ? "bg-blue-500" : "bg-blue-200"
       } hover:bg-blue-500`}
-      style={{
-        transform: isSelected ? "scale(1.2)" : "scale(1)",
-        transition: "0.05s ease-in-out transform",
-      }}
       onClick={onClick}
       variants={variants}
       initial={"initial"}
