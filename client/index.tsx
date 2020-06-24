@@ -144,7 +144,11 @@ const HiddenStateSubscription = () => {
 
 const ClearAllButton = () => {
   const onClear = useClear()
-  return <Button onClick={onClear}>Clear All</Button>
+  return (
+    <Button color={"red"} onClick={onClear}>
+      Clear All
+    </Button>
+  )
 }
 
 const isConfidenceSelectedState = selectorFamily({
@@ -169,8 +173,8 @@ const Confidence: React.FC<{ value: number }> = ({ value }) => {
   return (
     <motion.button
       className={`p-2 rounded-full shadow-lg ${
-        isSelected ? "bg-green-400" : "bg-green-200"
-      } hover:bg-green-400`}
+        isSelected ? "bg-blue-500" : "bg-blue-200"
+      } hover:bg-blue-500`}
       style={{
         transform: isSelected ? "scale(1.2)" : "scale(1)",
         transition: "0.05s ease-in-out transform",
@@ -252,21 +256,22 @@ const UsernameForm = () => {
 
   return (
     <input
-      className="bg-grey-100 text-green-900 rounded shadow p-2"
+      className="bg-grey-100 text-gray-900 rounded shadow p-2"
       value={username}
       onChange={(event) => setUsername(event.target.value)}
     />
   )
 }
 
-const Button: React.FC<HTMLMotionProps<"button">> = ({
+const Button: React.FC<HTMLMotionProps<"button"> & { color: string }> = ({
   children,
+  color,
   ...props
 }) => {
   return (
     <motion.button
       {...props}
-      className="p-2 bg-green-600 text-green-100 rounded shadow"
+      className={`p-2 bg-${color}-600 text-${color}-100 rounded shadow`}
       whileHover={{ translateY: -1 }}
     >
       {children}
@@ -278,18 +283,20 @@ const HideButton = () => {
   const [hidden, setHidden] = useRecoilState(hiddenState)
 
   return (
-    <Button onClick={() => setHidden(!hidden)}>
+    <Button color={"blue"} onClick={() => setHidden(!hidden)}>
       {hidden ? "Show Results" : "Hide Results"}
     </Button>
   )
 }
+
+const Divider = () => <div className="pt-px bg-gray-700 my-4" />
 
 const Sidebar = () => {
   const { voteCount, voteAverageRounded } = useRecoilValue(voteStatisticsState)
   const hidden = useRecoilValue(hiddenState)
 
   return (
-    <div className="flex flex-col p-4 bg-green-800  text-green-200">
+    <div className="flex flex-col p-4 bg-gray-800  text-gray-200">
       <AnimatePresence>
         <h2 className="text-lg text-center">Settings</h2>
         <div className="mb-4" />
@@ -304,7 +311,7 @@ const Sidebar = () => {
         <div className="m-2" />
         <HideButton />
 
-        <div className="pt-px bg-green-700 my-4" />
+        <Divider />
         <div className="text-center text-lg">
           # Votes:{" "}
           <motion.span
@@ -322,9 +329,9 @@ const Sidebar = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
           >
-            <div className="mb-4" />
+            <Divider />
             <div className="text-center text-lg">Avg: {voteAverageRounded}</div>
-            <div className="pt-px bg-green-700 my-4" />
+            <Divider />
             <VoteCount />
           </motion.div>
         )}
