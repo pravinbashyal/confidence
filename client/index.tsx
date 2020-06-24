@@ -348,7 +348,7 @@ const App = () => {
         <CurrentUsernameSubscription />
         <main className="flex flex-row min-h-screen items-stretch">
           <div className="p-4 bg-gray-100 flex-grow flex items-center justify-center">
-            <div className="max-w-xl">
+            <div>
               <ConfidencePicker />
             </div>
           </div>
