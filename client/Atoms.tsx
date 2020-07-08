@@ -18,6 +18,7 @@ export const Button: React.FC<
 export const Divider: React.FC<{ size?: number }> = ({ size = 4 }) => (
   <div className={`pt-px bg-gray-700 my-${size}`} />
 )
+
 export const Spacer: React.FC<{ size?: number }> = ({ size = 2 }) => (
   <div className={`m-${size}`} />
 )
