@@ -1,6 +1,6 @@
 const app = require("express")()
 const http = require("http").createServer(app)
-const io = require("socket.io")(http)
+const broadcaster = require("socket.io")(http)
 const path = require("path")
 
 const file = path.resolve(__dirname, "..", "client", "index.html")
@@ -9,7 +9,7 @@ const Bundler = require("parcel-bundler")
 const bundler = new Bundler(file, options)
 app.use(bundler.middleware())
 
-class Poll {
+class ConfidencePoll {
   votes = {}
   hidden = true
 
@@ -26,32 +26,32 @@ class Poll {
   }
 }
 
-const poll = new Poll()
+const confidencePoll = new ConfidencePoll()
 
-io.on("connection", (socket) => {
-  socket.on("ready", () => {
-    socket.emit("votes", { votes: poll.votes })
-    socket.emit("hidden", { hidden: poll.hidden })
+broadcaster.on("connection", (subscriber) => {
+  subscriber.on("ready", () => {
+    subscriber.emit("votes", { votes: confidencePoll.votes })
+    subscriber.emit("hidden", { hidden: confidencePoll.hidden })
   })
 
-  socket.on("hide", ({ hidden }) => {
-    poll.hidden = Boolean(hidden)
-    io.emit("hidden", { hidden: poll.hidden })
+  subscriber.on("hide", ({ hidden }) => {
+    confidencePoll.hidden = Boolean(hidden)
+    broadcaster.emit("hidden", { hidden: confidencePoll.hidden })
   })
 
-  socket.on("confidence", ({ confidence, username }) => {
-    poll.vote(username, confidence)
-    io.emit("votes", { votes: poll.votes })
+  subscriber.on("confidence", ({ confidence, username }) => {
+    confidencePoll.vote(username, confidence)
+    broadcaster.emit("votes", { votes: confidencePoll.votes })
   })
 
-  socket.on("clear", () => {
-    poll.clear()
-    io.emit("votes", { votes: poll.votes })
+  subscriber.on("clear", () => {
+    confidencePoll.clear()
+    broadcaster.emit("votes", { votes: confidencePoll.votes })
   })
 
-  socket.on("unset", ({ username }) => {
-    poll.unset(username)
-    io.emit("votes", { votes: poll.votes })
+  subscriber.on("unset", ({ username }) => {
+    confidencePoll.unset(username)
+    broadcaster.emit("votes", { votes: confidencePoll.votes })
   })
 })
 
