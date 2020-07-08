@@ -1,6 +1,6 @@
 const app = require("express")()
 const http = require("http").createServer(app)
-const broadcaster = require("socket.io")(http)
+const io = require("socket.io")(http)
 const path = require("path")
 
 const file = path.resolve(__dirname, "..", "client", "index.html")
@@ -28,7 +28,8 @@ class ConfidencePoll {
 
 const confidencePoll = new ConfidencePoll()
 
-broadcaster.on("connection", (subscriber) => {
+const confidenceBroadcaster = io.of("/confidence")
+confidenceBroadcaster.on("connection", (subscriber) => {
   subscriber.on("ready", () => {
     subscriber.emit("votes", { votes: confidencePoll.votes })
     subscriber.emit("hidden", { hidden: confidencePoll.hidden })
@@ -36,22 +37,22 @@ broadcaster.on("connection", (subscriber) => {
 
   subscriber.on("hide", ({ hidden }) => {
     confidencePoll.hidden = Boolean(hidden)
-    broadcaster.emit("hidden", { hidden: confidencePoll.hidden })
+    confidenceBroadcaster.emit("hidden", { hidden: confidencePoll.hidden })
   })
 
   subscriber.on("confidence", ({ confidence, username }) => {
     confidencePoll.vote(username, confidence)
-    broadcaster.emit("votes", { votes: confidencePoll.votes })
+    confidenceBroadcaster.emit("votes", { votes: confidencePoll.votes })
   })
 
   subscriber.on("clear", () => {
     confidencePoll.clear()
-    broadcaster.emit("votes", { votes: confidencePoll.votes })
+    confidenceBroadcaster.emit("votes", { votes: confidencePoll.votes })
   })
 
   subscriber.on("unset", ({ username }) => {
     confidencePoll.unset(username)
-    broadcaster.emit("votes", { votes: confidencePoll.votes })
+    confidenceBroadcaster.emit("votes", { votes: confidencePoll.votes })
   })
 })
 

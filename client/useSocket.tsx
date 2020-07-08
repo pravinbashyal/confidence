@@ -4,7 +4,7 @@ const SocketContext = createContext<ReturnType<typeof io> | undefined>(
   undefined
 )
 export const SocketProvider: React.FC = ({ children }) => {
-  const socketRef = useRef(io())
+  const socketRef = useRef(io("/confidence"))
   return (
     <SocketContext.Provider value={socketRef.current}>
       {children}
