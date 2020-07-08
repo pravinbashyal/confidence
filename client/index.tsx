@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, createContext, useContext } from "react"
+import React, { useEffect, useRef } from "react"
 import { render } from "react-dom"
-import io from "socket.io-client"
 import {
   RecoilRoot,
   atom,
@@ -9,38 +8,28 @@ import {
   selector,
   selectorFamily,
 } from "recoil"
-import { motion, HTMLMotionProps, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
+import { useSocket, SocketProvider } from "./useSocket"
+import { currentUsernameState } from "./currentUsernameState"
+import { invert } from "./object"
+import { Button, Divider, Spacer } from "./Atoms"
+import { round, average } from "./math"
 
-const SocketContext = createContext<ReturnType<typeof io> | undefined>(
-  undefined
-)
-const SocketProvider: React.FC = ({ children }) => {
-  const socketRef = useRef(io())
-  return (
-    <SocketContext.Provider value={socketRef.current}>
-      {children}
-    </SocketContext.Provider>
-  )
+const CurrentUsernameSubscription = () => {
+  const [currentUsername] = useRecoilState(currentUsernameState)
+  const socket = useSocket()
+
+  useEffect(() => {
+    return () => {
+      socket.emit("unset", { username: currentUsername })
+    }
+  }, [currentUsername])
+
+  useEffect(() => {
+    window.localStorage.setItem("username", currentUsername)
+  }, [currentUsername])
+  return null
 }
-
-const useSocket = () => {
-  const socket = useContext(SocketContext)
-  if (!socket) {
-    throw new Error("Must use in SocketContext")
-  }
-  return socket
-}
-
-const currentUsernameState = atom({
-  key: "currentUsernameState",
-  default:
-    window.localStorage.getItem("username") ||
-    (() => {
-      const username = `Anon-${Date.now()}`
-      window.localStorage.setItem("username", username)
-      return username
-    })(),
-})
 
 const useClear = () => {
   const socket = useSocket()
@@ -60,18 +49,6 @@ const useUnset = () => {
   return () => socket.emit("unset", { username })
 }
 
-const CurrentUsernameSubscription = () => {
-  const [currentUsername] = useRecoilState(currentUsernameState)
-  const socket = useSocket()
-  useEffect(() => {
-    window.localStorage.setItem("username", currentUsername)
-    return () => {
-      socket.emit("unset", { username: currentUsername })
-    }
-  }, [currentUsername])
-  return null
-}
-
 const InitialSubscription = () => {
   const socket = useSocket()
   useEffect(() => {
@@ -85,18 +62,6 @@ const InitialSubscription = () => {
   }, [socket])
 
   return null
-}
-
-const invert = (value: { [index: string]: number }) => {
-  const dict: { [index: number]: string[] } = {}
-  Object.entries(value).forEach((entry) => {
-    const key = entry[1]
-    if (!dict[key]) {
-      dict[key] = []
-    }
-    dict[key].push(entry[0])
-  })
-  return dict
 }
 
 const confidencesState = atom<{ [index: string]: number }>({
@@ -239,13 +204,10 @@ const voteStatisticsState = selector({
   key: "voteStatisticsState",
   get: ({ get }) => {
     const confidences = get(confidencesState)
-    const voteCount = Object.values(confidences).length
-    const voteTotal = Object.values(confidences).reduce(
-      (total, c) => total + c,
-      0
-    )
-    const avg = voteTotal / voteCount || 0
-    const voteAverageRounded = Math.round(avg * 100 + Number.EPSILON) / 100
+    const votes = Object.values(confidences)
+    const voteCount = votes.length
+    const avg = average(votes) || 0
+    const voteAverageRounded = round(avg)
 
     return {
       voteAverageRounded,
@@ -266,22 +228,6 @@ const UsernameForm = () => {
   )
 }
 
-const Button: React.FC<HTMLMotionProps<"button"> & { color: string }> = ({
-  children,
-  color,
-  ...props
-}) => {
-  return (
-    <motion.button
-      {...props}
-      className={`p-2 bg-${color}-600 text-${color}-100 rounded shadow`}
-      whileHover={{ translateY: -1 }}
-    >
-      {children}
-    </motion.button>
-  )
-}
-
 const HideButton = () => {
   const [hidden, setHidden] = useRecoilState(hiddenState)
 
@@ -292,8 +238,6 @@ const HideButton = () => {
   )
 }
 
-const Divider = () => <div className="pt-px bg-gray-700 my-4" />
-
 const Sidebar = () => {
   const { voteCount, voteAverageRounded } = useRecoilValue(voteStatisticsState)
   const hidden = useRecoilValue(hiddenState)
@@ -302,17 +246,15 @@ const Sidebar = () => {
     <div className="flex flex-col p-4 bg-gray-800  text-gray-200">
       <AnimatePresence>
         <h2 className="text-lg text-center">Settings</h2>
-        <div className="mb-4" />
+        <Spacer />
         <UsernameForm />
-
-        <div className="m-4" />
+        <Spacer size={4} />
 
         <h1 className="text-lg text-center">Confidences</h1>
-        <div className="m-2" />
-        <ClearAllAndHideButton />
-
-        <div className="m-2" />
+        <Spacer />
         <HideButton />
+        <Spacer />
+        <ClearAllAndHideButton />
 
         <Divider />
         <div className="text-center text-lg">
