@@ -142,11 +142,18 @@ const HiddenStateSubscription = () => {
   return null
 }
 
-const ClearAllButton = () => {
-  const onClear = useClear()
+const ClearAllAndHideButton = () => {
+  const clear = useClear()
+  const [, setHidden] = useRecoilState(hiddenState)
+
+  const handler = () => {
+    clear()
+    setHidden(true)
+  }
+
   return (
-    <Button color={"red"} onClick={onClear}>
-      Clear All
+    <Button color={"red"} onClick={handler}>
+      Clear All & Hide
     </Button>
   )
 }
@@ -302,7 +309,7 @@ const Sidebar = () => {
 
         <h1 className="text-lg text-center">Confidences</h1>
         <div className="m-2" />
-        <ClearAllButton />
+        <ClearAllAndHideButton />
 
         <div className="m-2" />
         <HideButton />
