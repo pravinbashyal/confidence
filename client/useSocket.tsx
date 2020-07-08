@@ -1,8 +1,10 @@
 import React, { useRef, createContext, useContext } from "react"
 import io from "socket.io-client"
+
 const SocketContext = createContext<ReturnType<typeof io> | undefined>(
   undefined
 )
+
 export const SocketProvider: React.FC = ({ children }) => {
   const socketRef = useRef(io("/confidence"))
   return (
@@ -11,6 +13,7 @@ export const SocketProvider: React.FC = ({ children }) => {
     </SocketContext.Provider>
   )
 }
+
 export const useSocket = () => {
   const socket = useContext(SocketContext)
   if (!socket) {
