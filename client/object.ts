@@ -1,4 +1,4 @@
-export const invert = (value: { [index: string]: number }) => {
+export const groupByValue = (value: { [index: string]: number }) => {
   const dict: { [index: number]: string[] } = {}
   Object.entries(value).forEach((entry) => {
     const key = entry[1]

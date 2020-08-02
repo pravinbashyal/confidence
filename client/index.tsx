@@ -10,10 +10,11 @@ import {
 } from "recoil"
 import { motion, AnimatePresence } from "framer-motion"
 import { useSocket, SocketProvider } from "./useSocket"
-import { currentUsernameState } from "./currentUsernameState"
-import { invert } from "./object"
+import { currentUsernameState } from "./user/currentUsernameState"
+import { groupByValue } from "./object"
 import { Button, Divider, Spacer } from "./Atoms"
 import { round, average } from "./math"
+import { UserSettingsForm } from "./user/UserSettingsForm"
 
 const CurrentUsernameSubscription = () => {
   const [currentUsername] = useRecoilState(currentUsernameState)
@@ -133,7 +134,7 @@ const isConfidenceSelectedState = selectorFamily({
   },
 })
 
-const Confidence: React.FC<{ value: number }> = ({ value }) => {
+const ValueButton: React.FC<{ value: number }> = ({ value }) => {
   const isSelected = useRecoilValue(isConfidenceSelectedState(value))
   const onSelect = useVote()
   const onUnset = useUnset()
@@ -167,7 +168,7 @@ const ConfidencePicker = () => {
     <div className="flex flex-row flex-wrap -ml-2 -mt-2">
       {CONFIDENCE_VALUES.map((value) => (
         <div className="m-2" key={value}>
-          <Confidence value={value} />
+          <ValueButton value={value} />
         </div>
       ))}
     </div>
@@ -176,7 +177,7 @@ const ConfidencePicker = () => {
 
 const VoteCount = () => {
   const [confidences] = useRecoilState(confidencesState)
-  const confidencesByValue = invert(confidences)
+  const confidencesByValue = groupByValue(confidences)
   const confidencesWithVotesSorted = Object.entries(confidencesByValue).sort(
     (entry1, entry2) => entry2[1].length - entry1[1].length
   )
@@ -216,18 +217,6 @@ const voteStatisticsState = selector({
   },
 })
 
-const UsernameForm = () => {
-  const [username, setUsername] = useRecoilState(currentUsernameState)
-
-  return (
-    <input
-      className="bg-grey-100 text-gray-900 rounded shadow p-2"
-      value={username}
-      onChange={(event) => setUsername(event.target.value)}
-    />
-  )
-}
-
 const HideButton = () => {
   const [hidden, setHidden] = useRecoilState(hiddenState)
 
@@ -247,7 +236,7 @@ const Sidebar = () => {
       <AnimatePresence>
         <h2 className="text-lg text-center">Settings</h2>
         <Spacer />
-        <UsernameForm />
+        <UserSettingsForm />
         <Spacer size={4} />
 
         <h1 className="text-lg text-center">Confidences</h1>
