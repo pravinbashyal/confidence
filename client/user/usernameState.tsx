@@ -1,7 +1,7 @@
 import { atom } from "recoil"
 
-export const currentUsernameState = atom({
-  key: "currentUsernameState",
+export const usernameState = atom({
+  key: "usernameState",
   default: window.localStorage.getItem("username") || makePersistedUsername(),
 })
 

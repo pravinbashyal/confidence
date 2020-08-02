@@ -1,8 +1,8 @@
 import React from "react"
 import { useRecoilState } from "recoil"
-import { currentUsernameState } from "./currentUsernameState"
+import { usernameState } from "./usernameState"
 export const UserSettingsForm = () => {
-  const [username, setUsername] = useRecoilState(currentUsernameState)
+  const [username, setUsername] = useRecoilState(usernameState)
 
   return (
     <input

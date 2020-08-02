@@ -10,14 +10,14 @@ import {
 } from "recoil"
 import { motion, AnimatePresence } from "framer-motion"
 import { useSocket, SocketProvider } from "./useSocket"
-import { currentUsernameState } from "./user/currentUsernameState"
+import { usernameState } from "./user/usernameState"
 import { groupByValue } from "./object"
 import { Button, Divider, Spacer } from "./Atoms"
 import { round, average } from "./math"
 import { UserSettingsForm } from "./user/UserSettingsForm"
 
 const CurrentUsernameSubscription = () => {
-  const [currentUsername] = useRecoilState(currentUsernameState)
+  const [currentUsername] = useRecoilState(usernameState)
   const socket = useSocket()
 
   useEffect(() => {
@@ -39,14 +39,14 @@ const useClear = () => {
 
 const useVote = () => {
   const socket = useSocket()
-  const [username] = useRecoilState(currentUsernameState)
+  const [username] = useRecoilState(usernameState)
   return (vote: number) =>
     socket.emit("confidence", { confidence: vote, username })
 }
 
 const useUnset = () => {
   const socket = useSocket()
-  const [username] = useRecoilState(currentUsernameState)
+  const [username] = useRecoilState(usernameState)
   return () => socket.emit("unset", { username })
 }
 
@@ -127,7 +127,7 @@ const ClearAllAndHideButton = () => {
 const isConfidenceSelectedState = selectorFamily({
   key: "isConfidenceSelectedState",
   get: (value) => ({ get }) => {
-    const username = get(currentUsernameState)
+    const username = get(usernameState)
     const confidences = get(confidencesState)
     const selectedByUser = confidences[username]
     return selectedByUser === value
