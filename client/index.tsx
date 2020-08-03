@@ -15,6 +15,7 @@ import { groupByValue } from "./object"
 import { Button, Divider, Spacer } from "./Atoms"
 import { round, average } from "./math"
 import { UserSettingsForm } from "./user/UserSettingsForm"
+import { HashRouter as Router } from "react-router-dom"
 
 const CurrentUsernameSubscription = () => {
   const [currentUsername] = useRecoilState(usernameState)
@@ -278,22 +279,24 @@ const CONFIDENCE_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 const App = () => {
   return (
-    <RecoilRoot>
-      <SocketProvider uri="/confidence">
-        <InitialSubscription />
-        <HiddenStateSubscription />
-        <ConfidencesSubscription />
-        <CurrentUsernameSubscription />
-        <main className="flex flex-row min-h-screen items-stretch">
-          <div className="p-4 bg-gray-100 flex-grow flex items-center justify-center">
-            <div>
-              <ConfidencePicker />
+    <Router>
+      <RecoilRoot>
+        <SocketProvider uri="/confidence">
+          <InitialSubscription />
+          <HiddenStateSubscription />
+          <ConfidencesSubscription />
+          <CurrentUsernameSubscription />
+          <main className="flex flex-row min-h-screen items-stretch">
+            <div className="p-4 bg-gray-100 flex-grow flex items-center justify-center">
+              <div>
+                <ConfidencePicker />
+              </div>
             </div>
-          </div>
-          <Sidebar />
-        </main>
-      </SocketProvider>
-    </RecoilRoot>
+            <Sidebar />
+          </main>
+        </SocketProvider>
+      </RecoilRoot>
+    </Router>
   )
 }
 
