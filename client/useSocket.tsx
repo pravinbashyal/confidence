@@ -1,4 +1,4 @@
-import React, { useRef, createContext, useContext } from "react"
+import React, { useState, createContext, useContext } from "react"
 import io from "socket.io-client"
 
 const SocketContext = createContext<ReturnType<typeof io> | undefined>(
@@ -9,11 +9,9 @@ export const SocketProvider: React.FC<{ uri: string }> = ({
   children,
   uri,
 }) => {
-  const socketRef = useRef(io(uri))
+  const [socket] = useState(io(uri))
   return (
-    <SocketContext.Provider value={socketRef.current}>
-      {children}
-    </SocketContext.Provider>
+    <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
   )
 }
 
