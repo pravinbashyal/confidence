@@ -1,15 +1,15 @@
 import React, { useState, createContext, useContext } from "react"
 import io from "socket.io-client"
 
-const SocketContext = createContext<ReturnType<typeof io> | undefined>(
-  undefined
-)
+type SocketContextValue = SocketIOClient.Socket | undefined
+
+const SocketContext = createContext<SocketContextValue>(undefined)
 
 export const SocketProvider: React.FC<{ uri: string }> = ({
   children,
   uri,
 }) => {
-  const [socket, setSocket] = useState<SocketIOClient.Socket | undefined>()
+  const [socket, setSocket] = useState<SocketContextValue>()
 
   React.useEffect(() => {
     const s = io(uri)
