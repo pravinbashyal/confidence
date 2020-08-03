@@ -9,7 +9,21 @@ export const SocketProvider: React.FC<{ uri: string }> = ({
   children,
   uri,
 }) => {
-  const [socket] = useState(io(uri))
+  const [socket, setSocket] = useState<SocketIOClient.Socket | undefined>()
+
+  React.useEffect(() => {
+    const s = io(uri)
+    setSocket(s)
+
+    return () => {
+      s.close()
+    }
+  }, [uri])
+
+  if (!socket) {
+    return null
+  }
+
   return (
     <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
   )
