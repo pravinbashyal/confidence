@@ -13,6 +13,7 @@ import { groupByValue } from "./object"
 import { Button, Divider, Spacer } from "./Atoms"
 import { round, average } from "./math"
 import { UserSettingsForm } from "./user/UserSettingsForm"
+
 const CurrentUsernameSubscription = () => {
   const [currentUsername] = useRecoilState(usernameState)
   const socket = useSocket()
@@ -26,23 +27,28 @@ const CurrentUsernameSubscription = () => {
   useEffect(() => {
     window.localStorage.setItem("username", currentUsername)
   }, [currentUsername])
+
   return null
 }
+
 const useClear = () => {
   const socket = useSocket()
   return () => socket.emit("clear")
 }
+
 const useVote = () => {
   const socket = useSocket()
   const [username] = useRecoilState(usernameState)
   return (vote: number) =>
     socket.emit("confidence", { confidence: vote, username })
 }
+
 const useUnset = () => {
   const socket = useSocket()
   const [username] = useRecoilState(usernameState)
   return () => socket.emit("unset", { username })
 }
+
 const InitialSubscription = () => {
   const socket = useSocket()
   useEffect(() => {
@@ -57,10 +63,12 @@ const InitialSubscription = () => {
 
   return null
 }
+
 const confidencesState = atom<{ [index: string]: number }>({
   key: "confidencesState",
   default: {},
 })
+
 const ConfidencesSubscription = () => {
   const socket = useSocket()
   const [, setConfidences] = useRecoilState(confidencesState)
@@ -71,10 +79,12 @@ const ConfidencesSubscription = () => {
 
   return null
 }
+
 const hiddenState = atom({
   default: true,
   key: "hiddenState",
 })
+
 const HiddenStateSubscription = () => {
   const socket = useSocket()
   const [hidden, setHidden] = useRecoilState(hiddenState)
@@ -96,6 +106,7 @@ const HiddenStateSubscription = () => {
 
   return null
 }
+
 const ClearAllAndHideButton = () => {
   const clear = useClear()
   const [, setHidden] = useRecoilState(hiddenState)
@@ -111,6 +122,7 @@ const ClearAllAndHideButton = () => {
     </Button>
   )
 }
+
 const isConfidenceSelectedState = selectorFamily({
   key: "isConfidenceSelectedState",
   get: (value) => ({ get }) => {
@@ -120,6 +132,7 @@ const isConfidenceSelectedState = selectorFamily({
     return selectedByUser === value
   },
 })
+
 const ValueButton: React.FC<{ value: number }> = ({ value }) => {
   const isSelected = useRecoilValue(isConfidenceSelectedState(value))
   const onSelect = useVote()
@@ -148,6 +161,7 @@ const ValueButton: React.FC<{ value: number }> = ({ value }) => {
     </motion.button>
   )
 }
+
 const ConfidencePicker = () => {
   return (
     <div className="flex flex-row flex-wrap -ml-2 -mt-2">
@@ -159,6 +173,7 @@ const ConfidencePicker = () => {
     </div>
   )
 }
+
 const VoteCount = () => {
   const [confidences] = useRecoilState(confidencesState)
   const confidencesByValue = groupByValue(confidences)
@@ -184,6 +199,7 @@ const VoteCount = () => {
     </>
   )
 }
+
 const voteStatisticsState = selector({
   key: "voteStatisticsState",
   get: ({ get }) => {
@@ -199,6 +215,7 @@ const voteStatisticsState = selector({
     }
   },
 })
+
 const HideButton = () => {
   const [hidden, setHidden] = useRecoilState(hiddenState)
 
@@ -208,6 +225,7 @@ const HideButton = () => {
     </Button>
   )
 }
+
 const Sidebar = () => {
   const { voteCount, voteAverageRounded } = useRecoilValue(voteStatisticsState)
   const hidden = useRecoilValue(hiddenState)
@@ -254,6 +272,7 @@ const Sidebar = () => {
     </div>
   )
 }
+
 const CONFIDENCE_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 export const ConfidencesPage = () => (
   <SocketProvider uri="/confidence">
