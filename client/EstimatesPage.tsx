@@ -12,7 +12,6 @@ import { useSocket, SocketProvider } from "./useSocket"
 import { usernameState } from "./user/usernameState"
 import { groupByValue } from "./object"
 import { Button, Divider, Spacer } from "./Atoms"
-import { round, average } from "./math"
 import { UserSettingsForm } from "./user/UserSettingsForm"
 import { Link } from "react-router-dom"
 
@@ -41,8 +40,7 @@ const useClear = () => {
 const useVote = () => {
   const socket = useSocket()
   const [username] = useRecoilState(usernameState)
-  return (vote: number) =>
-    socket.emit("confidence", { confidence: vote, username })
+  return (vote: string) => socket.emit("estimate", { estimate: vote, username })
 }
 
 const useUnset = () => {
@@ -66,30 +64,30 @@ const InitialSubscription = () => {
   return null
 }
 
-const confidencesState = atom<{ [index: string]: number }>({
-  key: "confidencesState",
+const estimatesState = atom<{ [index: string]: number }>({
+  key: "estimatesState",
   default: {},
 })
 
-const ConfidencesSubscription = () => {
+const EstimatesSubscription = () => {
   const socket = useSocket()
-  const [, setConfidences] = useRecoilState(confidencesState)
+  const [, setEstimates] = useRecoilState(estimatesState)
 
   useEffect(() => {
-    socket.on("votes", ({ votes }: any) => setConfidences(votes))
+    socket.on("votes", ({ votes }: any) => setEstimates(votes))
   }, [socket])
 
   return null
 }
 
-const confidencesHiddenState = atom({
+const hiddenState = atom({
   default: true,
-  key: "confidencesHiddenState",
+  key: "hiddenState",
 })
 
 const HiddenStateSubscription = () => {
   const socket = useSocket()
-  const [hidden, setHidden] = useRecoilState(confidencesHiddenState)
+  const [hidden, setHidden] = useRecoilState(hiddenState)
   const knownHiddenState = useRef(hidden)
 
   useEffect(() => {
@@ -111,7 +109,7 @@ const HiddenStateSubscription = () => {
 
 const ClearAllAndHideButton = () => {
   const clear = useClear()
-  const [, setHidden] = useRecoilState(confidencesHiddenState)
+  const [, setHidden] = useRecoilState(hiddenState)
 
   const handler = () => {
     clear()
@@ -125,18 +123,18 @@ const ClearAllAndHideButton = () => {
   )
 }
 
-const isConfidenceSelectedState = selectorFamily({
-  key: "isConfidenceSelectedState",
+const isEstimateSelectedState = selectorFamily({
+  key: "isEstimateSelectedState",
   get: (value) => ({ get }) => {
     const username = get(usernameState)
-    const confidences = get(confidencesState)
-    const selectedByUser = confidences[username]
+    const estimates = get(estimatesState)
+    const selectedByUser = estimates[username]
     return selectedByUser === value
   },
 })
 
-const ValueButton: React.FC<{ value: number }> = ({ value }) => {
-  const isSelected = useRecoilValue(isConfidenceSelectedState(value))
+const ValueButton: React.FC<{ value: string }> = ({ value }) => {
+  const isSelected = useRecoilValue(isEstimateSelectedState(value))
   const onSelect = useVote()
   const onUnset = useUnset()
   const onClick = () => (isSelected ? onUnset() : onSelect(value))
@@ -164,11 +162,11 @@ const ValueButton: React.FC<{ value: number }> = ({ value }) => {
   )
 }
 
-const ConfidencePicker = () => {
+const EstimatePicker = () => {
   return (
     <div className="flex flex-row flex-wrap -ml-2 -mt-2">
-      {CONFIDENCE_VALUES.map((value) => (
-        <div className="m-2" key={`value-${value}`}>
+      {ESTIMATE_VALUES.map((value) => (
+        <div className="m-2" key={value}>
           <ValueButton value={value} />
         </div>
       ))}
@@ -177,20 +175,20 @@ const ConfidencePicker = () => {
 }
 
 const VoteCount = () => {
-  const [confidences] = useRecoilState(confidencesState)
-  const confidencesByValue = groupByValue(confidences)
-  const confidencesWithVotesSorted = Object.entries(confidencesByValue).sort(
+  const [estimates] = useRecoilState(estimatesState)
+  const estimatesByValue = groupByValue(estimates)
+  const estimatesWithVotesSorted = Object.entries(estimatesByValue).sort(
     (entry1, entry2) => entry2[1].length - entry1[1].length
   )
 
   return (
     <>
-      {confidencesWithVotesSorted.map((entry) => {
+      {estimatesWithVotesSorted.map((entry) => {
         const [value, votes] = entry
         const votesCount = votes.length
 
         return (
-          <React.Fragment key={`vote-sorted-${value}`}>
+          <React.Fragment key={value}>
             <div className="text-lg text-center">
               -{value}- ({votesCount})
             </div>
@@ -202,25 +200,21 @@ const VoteCount = () => {
   )
 }
 
-const confidencesVoteStatisticsState = selector({
-  key: "confidencesVoteStatisticsState",
+const voteStatisticsState = selector({
+  key: "voteStatisticsState",
   get: ({ get }) => {
-    const confidences = get(confidencesState)
-    const votes = Object.values(confidences)
-
+    const estimates = get(estimatesState)
+    const votes = Object.values(estimates)
     const voteCount = votes.length
-    const avg = average(votes) || 0
-    const voteAverageRounded = round(avg)
 
     return {
-      voteAverageRounded,
       voteCount,
     }
   },
 })
 
 const HideButton = () => {
-  const [hidden, setHidden] = useRecoilState(confidencesHiddenState)
+  const [hidden, setHidden] = useRecoilState(hiddenState)
 
   return (
     <Button color={"blue"} onClick={() => setHidden(!hidden)}>
@@ -230,22 +224,20 @@ const HideButton = () => {
 }
 
 const Sidebar = () => {
-  const { voteCount, voteAverageRounded } = useRecoilValue(
-    confidencesVoteStatisticsState
-  )
-  const hidden = useRecoilValue(confidencesHiddenState)
+  const { voteCount } = useRecoilValue(voteStatisticsState)
+  const hidden = useRecoilValue(hiddenState)
 
   return (
     <div className="flex flex-col p-4 bg-gray-800  text-gray-200">
       <AnimatePresence>
-        <Link to="/estimates">Go to Estimates</Link>
+        <Link to="/confidences">Go to Confidences</Link>
         <Spacer />
         <h2 className="text-lg text-center">Settings</h2>
         <Spacer />
         <UserSettingsForm />
         <Spacer size={4} />
 
-        <h1 className="text-lg text-center">Confidences</h1>
+        <h1 className="text-lg text-center">Estimates</h1>
         <Spacer />
         <HideButton />
         <Spacer />
@@ -258,7 +250,7 @@ const Sidebar = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 2 } }}
-            key={`voteCount-${voteCount}`}
+            key={voteCount}
           >
             {voteCount}
           </motion.span>
@@ -268,10 +260,7 @@ const Sidebar = () => {
             initial={{ opacity: 0, y: 50, scale: 0.3 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-            key="summary"
           >
-            <Divider />
-            <div className="text-center text-lg">Avg: {voteAverageRounded}</div>
             <Divider />
             <VoteCount />
           </motion.div>
@@ -281,18 +270,31 @@ const Sidebar = () => {
   )
 }
 
-const CONFIDENCE_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-export const ConfidencesPage = () => (
+const ESTIMATE_VALUES = [
+  "1",
+  "2",
+  "3",
+  "5",
+  "8",
+  "13",
+  "20",
+  "40",
+  "100",
+  "∞",
+  "?",
+]
+
+export const EstimatesPage = () => (
   <RecoilRoot>
-    <SocketProvider uri="/confidence">
+    <SocketProvider uri="/estimate">
       <InitialSubscription />
       <HiddenStateSubscription />
-      <ConfidencesSubscription />
+      <EstimatesSubscription />
       <CurrentUsernameSubscription />
       <main className="flex flex-row min-h-screen items-stretch">
         <div className="p-4 bg-gray-100 flex-grow flex items-center justify-center">
           <div>
-            <ConfidencePicker />
+            <EstimatePicker />
           </div>
         </div>
         <Sidebar />
