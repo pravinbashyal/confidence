@@ -7,37 +7,9 @@ const path = require("path")
 const file = path.resolve(__dirname, "..", "client", "index.html")
 const options = {}
 const Bundler = require("parcel-bundler")
+const { ConfidencePoll } = require("./ConfidencePoll")
 const bundler = new Bundler(file, options)
 app.use(bundler.middleware())
-
-class ConfidencePoll {
-  /**
-   * @type Record<string, number | undefined>
-   */
-  votes = {}
-
-  hidden = true
-
-  /**
-   * @param {string} username
-   * @param {number} confidence
-   */
-  vote(username, confidence) {
-    this.votes[username] = confidence
-  }
-
-  clear() {
-    this.votes = {}
-  }
-
-  /**
-   *
-   * @param {string} username
-   */
-  unset(username) {
-    this.votes[username] = undefined
-  }
-}
 
 const confidencePoll = new ConfidencePoll()
 
