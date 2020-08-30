@@ -1,3 +1,4 @@
+// ts-check
 const app = require("express")()
 const http = require("http").createServer(app)
 const io = require("socket.io")(http)
@@ -10,9 +11,17 @@ const bundler = new Bundler(file, options)
 app.use(bundler.middleware())
 
 class ConfidencePoll {
+  /**
+   * @type Record<string, number | undefined>
+   */
   votes = {}
+
   hidden = true
 
+  /**
+   * @param {string} username
+   * @param {number} confidence
+   */
   vote(username, confidence) {
     this.votes[username] = confidence
   }
@@ -21,6 +30,10 @@ class ConfidencePoll {
     this.votes = {}
   }
 
+  /**
+   *
+   * @param {string} username
+   */
   unset(username) {
     this.votes[username] = undefined
   }
