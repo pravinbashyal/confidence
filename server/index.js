@@ -8,6 +8,8 @@ const file = path.resolve(__dirname, "..", "client", "index.html")
 const options = {}
 const Bundler = require("parcel-bundler")
 const { ConfidencePoll } = require("./ConfidencePoll")
+const { EstimatePoll } = require("./EstimatePoll")
+
 const bundler = new Bundler(file, options)
 app.use(bundler.middleware())
 
@@ -38,6 +40,36 @@ confidenceBroadcaster.on("connection", (subscriber) => {
   subscriber.on("unset", ({ username }) => {
     confidencePoll.unset(username)
     confidenceBroadcaster.emit("votes", { votes: confidencePoll.votes })
+  })
+})
+
+const estimatePoll = new ConfidencePoll()
+
+const estimateBroadcaster = io.of("/estimate")
+estimateBroadcaster.on("connection", (subscriber) => {
+  subscriber.on("ready", () => {
+    subscriber.emit("votes", { votes: estimatePoll.votes })
+    subscriber.emit("hidden", { hidden: estimatePoll.hidden })
+  })
+
+  subscriber.on("hide", ({ hidden }) => {
+    estimatePoll.hidden = Boolean(hidden)
+    estimateBroadcaster.emit("hidden", { hidden: estimatePoll.hidden })
+  })
+
+  subscriber.on("estimate", ({ estimate, username }) => {
+    estimatePoll.vote(username, estimate)
+    estimateBroadcaster.emit("votes", { votes: estimatePoll.votes })
+  })
+
+  subscriber.on("clear", () => {
+    estimatePoll.clear()
+    estimateBroadcaster.emit("votes", { votes: estimatePoll.votes })
+  })
+
+  subscriber.on("unset", ({ username }) => {
+    estimatePoll.unset(username)
+    estimateBroadcaster.emit("votes", { votes: estimatePoll.votes })
   })
 })
 
