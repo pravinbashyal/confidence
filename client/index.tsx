@@ -15,7 +15,7 @@ import { groupByValue } from "./object"
 import { Button, Divider, Spacer } from "./Atoms"
 import { round, average } from "./math"
 import { UserSettingsForm } from "./user/UserSettingsForm"
-import { HashRouter as Router, Route } from "react-router-dom"
+import { HashRouter as Router, Route, Redirect } from "react-router-dom"
 
 const CurrentUsernameSubscription = () => {
   const [currentUsername] = useRecoilState(usernameState)
@@ -298,7 +298,8 @@ const App = () => {
   return (
     <Router>
       <RecoilRoot>
-        <Route path="/" component={ConfidencesPage} />
+        <Route path="/confidences" component={ConfidencesPage} />
+        <Redirect exact path="/" to="/confidences" />
       </RecoilRoot>
     </Router>
   )
